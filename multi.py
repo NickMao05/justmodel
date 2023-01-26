@@ -108,7 +108,7 @@ def logrotate():
 
 def main():
     # 业务逻辑
-    log("INFO","Hello world!!!")
+    print("hello nick")
     # 业务逻辑
     time.sleep(2)
 
