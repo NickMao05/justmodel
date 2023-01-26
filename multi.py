@@ -8,9 +8,6 @@ logger = None
 loop = True
 job = True
 
-os.environ['REQS_FILE'] = 'requirements.txt'
-os.environ['COMMANDLINE_ARGS'] = '--no-half-vae --port 33897 --ngrok 2K95gmylUQ7mztGzNeIPK6h1oI0_3AZs2je3o12Ai8d2qj1PU --enable-insecure-extension-access --localizations-dir /kaggle/working/stable-diffusion-webui/localizations/  --deepdanbooru --disable-safe-unpickle'
-os.environ['CUDA_VISIBLE_DEVICES'] = '0,1'
 # 保存进程ID
 def savepid(pid):
     with open(pidfile, 'w') as f:
@@ -111,6 +108,9 @@ def logrotate():
 
 def main():
     # 业务逻辑
+    os.environ['REQS_FILE'] = 'requirements.txt'
+    os.environ['COMMANDLINE_ARGS'] = '--no-half-vae --port 33897 --ngrok 2K95gmylUQ7mztGzNeIPK6h1oI0_3AZs2je3o12Ai8d2qj1PU --enable-insecure-extension-access --localizations-dir /kaggle/working/stable-diffusion-webui/localizations/  --deepdanbooru --disable-safe-unpickle'
+    os.environ['CUDA_VISIBLE_DEVICES'] = '0,1'
     exec(open("launch.py").read())
     # 业务逻辑
     time.sleep(2)
