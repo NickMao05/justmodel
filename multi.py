@@ -1,4 +1,13 @@
 import time,os,signal,sys,atexit
+import subprocess
+import os
+import sys
+import importlib.util
+import shlex
+import platform
+import argparse
+import json
+
 # from atexit import register
 
 pidfile = "/tmp/netkiller.pid"
