@@ -4,14 +4,16 @@
 
 ## Updates / 更新情報
 
-- Jan 19 2023, 2023/1/19:
-  - Update to fix an error ``AttributeError: 'JSON' object has no attribute 'value'`` with the latest web UI. 
-  - 最新版の Web UI で発生する ``AttributeError: 'JSON' object has no attribute 'value'`` というエラーを解消しました。
-- Jan 16 2023, 2023/1/16:
-  - Update to support X/Y plot in the latest web UI. 
-  - If you cannot update the web UI, please download .zip file of the older version of this extension, from ``Releases``, and extract it to ``extensions`` folder.
-  - 最新版の Web UI のX/Y plotで動作するよう更新しました。
-  - Web UI を最新版に更新できない場合は、``Releases`` のところから過去のバージョンの zip ファイルをダウンロードし、``extensions`` フォルダへ展開してください。
+__Stable Diffusion web UI now seems to support LoRA trained by ``sd-scripts``.__ Thank you for great work!!!
+
+Note: Currently the models models for SD 2.x does not seem to be supported in Web UI. The models trained by the scripts 0.4.0 seem to be supported. 
+
+- 31 Jan. 2023, 2023/1/31
+  - Metadata editor for LoRA models is now integrated in ``Additional Network`` tab. Documentation will be added later. Thanks to space-nuko!
+  - LoRAモデル用のメタデータエディタ ``Additional Network`` タブに追加されました。ドキュメントはのちほど追加予定です。space-nuko氏に感謝します。
+
+Please read [Releases](https://github.com/kohya-ss/sd-webui-additional-networks/releases) for recent updates.
+最近の更新情報は [Release](https://github.com/kohya-ss/sd-webui-additional-networks/releases) をご覧ください。
 
 ## About
 
@@ -55,7 +57,7 @@ If you use LoRA models to plot, put the comma separated list of the model names 
 
 ![image](https://user-images.githubusercontent.com/52813779/212444037-8ccd9157-c341-4eb4-82b4-64e3c8ee0237.png)
 
-You can get the list in ``Additional Networks`` tab on top of the UI. Select some model from ``Model`` dropdown, and push ``Get List`` button. The model list can be copied for X/Y values.
+You can get the list of models with the button next to ``Values``. Please select any model in ``Model ?`` at ``Additional Networks`` in order to make the button work. Models in the same folder as the model will be listed.
 
 ![image](https://user-images.githubusercontent.com/52813779/212443639-97779d8d-0f7e-47f0-919c-41f053fe28a9.png)
 
@@ -105,7 +107,7 @@ LoRAモデルをX/Y plotの値（選択対象）として使う場合は、カ�
 
 ![image](https://user-images.githubusercontent.com/52813779/212444037-8ccd9157-c341-4eb4-82b4-64e3c8ee0237.png)
 
-モデルのリストはWeb UI上部の ``Additional Networks`` タブで取得できます。タブを開き、 ``Model`` ドロップダウンから適当なモデルを選択し、``Get List`` ボタンを押してください。モデルのリストが表示されます。リストはコピーしてX/Y plotのvaluesに指定できます。
+モデルのリストは選択肢の隣にあるボタンで取得できます。いずれかのモデルを ``Additional Networks`` の ``Model ?`` で選択しておいてください。そのモデルと同じフォルダにあるモデルの一覧が取得されます。
 
 ![image](https://user-images.githubusercontent.com/52813779/212443639-97779d8d-0f7e-47f0-919c-41f053fe28a9.png)
 

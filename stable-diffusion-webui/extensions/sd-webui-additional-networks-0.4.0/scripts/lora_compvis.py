@@ -5,7 +5,6 @@
 
 import copy
 import math
-import os
 import re
 from typing import NamedTuple
 import torch
@@ -17,6 +16,7 @@ class LoRAInfo(NamedTuple):
   module: torch.nn.Module
   multiplier: float
   dim: int
+  alpha: float
 
 
 class LoRAModule(torch.nn.Module):
@@ -24,9 +24,11 @@ class LoRAModule(torch.nn.Module):
   replaces forward method of the original Linear, instead of replacing the original Linear module.
   """
 
-  def __init__(self, lora_name, org_module: torch.nn.Module, multiplier=1.0, lora_dim=4):
+  def __init__(self, lora_name, org_module: torch.nn.Module, multiplier=1.0, lora_dim=4, alpha=1):
+    """ if alpha == 0 or None, alpha is rank (no scaling). """
     super().__init__()
     self.lora_name = lora_name
+    self.lora_dim = lora_dim
 
     if org_module.__class__.__name__ == 'Conv2d':
       in_dim = org_module.in_channels
@@ -38,6 +40,12 @@ class LoRAModule(torch.nn.Module):
       out_dim = org_module.out_features
       self.lora_down = torch.nn.Linear(in_dim, lora_dim, bias=False)
       self.lora_up = torch.nn.Linear(lora_dim, out_dim, bias=False)
+
+    if type(alpha) == torch.Tensor:
+      alpha = alpha.detach().float().numpy()                              # without casting, bf16 causes error
+    alpha = lora_dim if alpha is None or alpha == 0 else alpha
+    self.scale = alpha / self.lora_dim
+    self.register_buffer('alpha', torch.tensor(alpha))                    # 定数として扱える
 
     # same as microsoft's
     torch.nn.init.kaiming_uniform_(self.lora_down.weight, a=math.sqrt(5))
@@ -56,10 +64,10 @@ class LoRAModule(torch.nn.Module):
     """
     may be cascaded.
     """
-    return self.org_forward(x) + self.lora_up(self.lora_down(x)) * self.multiplier
+    return self.org_forward(x) + self.lora_up(self.lora_down(x)) * self.multiplier * self.scale
 
 
-def create_network_and_apply_compvis(du_state_dict, multiplier, text_encoder, unet, **kwargs):
+def create_network_and_apply_compvis(du_state_dict, multiplier_tenc, multiplier_unet, text_encoder, unet, **kwargs):
   # get device and dtype from unet
   for module in unet.modules():
     if module.__class__.__name__ == "Linear":
@@ -68,16 +76,49 @@ def create_network_and_apply_compvis(du_state_dict, multiplier, text_encoder, un
       dtype = param.dtype
       break
 
-  # get dims from state dict
-  size = du_state_dict[list(du_state_dict.keys())[0]].size()          # if conv2d size is like [320,4,1,1]
-  network_dim = min([s for s in size if s > 1])
-  print(f"dimension: {network_dim}, multiplier: {multiplier}")
+  # get dims (rank) and alpha from state dict
+  # currently it is assumed all LoRA have same alpha. alpha may be different in future.
+  network_alpha = None
+  network_dim = None
+  for key, value in du_state_dict.items():
+    if network_alpha is None and 'alpha' in key:
+      network_alpha = value
+    if network_dim is None and 'lora_down' in key and len(value.size()) == 2:
+      network_dim = value.size()[0]
+    if network_alpha is not None and network_dim is not None:
+      break
+  if network_alpha is None:
+    network_alpha = network_dim
+
+  print(f"dimension: {network_dim}, alpha: {network_alpha}, multiplier_unet: {multiplier_unet}, multiplier_tenc: {multiplier_tenc}")
+  if network_dim is None:
+    print(f"The selected model is not LoRA or not trained by `sd-scripts`?")
+    network_dim = 4
+    network_alpha = 1
 
   # create, apply and load weights
-  network = LoRANetworkCompvis(text_encoder, unet, multiplier=multiplier, lora_dim=network_dim)
+  network = LoRANetworkCompvis(text_encoder, unet, multiplier_tenc=multiplier_tenc,
+                               multiplier_unet=multiplier_unet, lora_dim=network_dim, alpha=network_alpha)
   state_dict = network.apply_lora_modules(du_state_dict)              # some weights are applied to text encoder
   network.to(dtype)                                              # with this, if error comes from next line, the model will be used
   info = network.load_state_dict(state_dict, strict=False)
+
+  # remove redundant warnings
+  if len(info.missing_keys) > 4:
+    missing_keys = []
+    alpha_count = 0
+    for key in info.missing_keys:
+      if 'alpha' not in key:
+        missing_keys.append(key)
+      else:
+        if alpha_count == 0:
+          missing_keys.append(key)
+        alpha_count += 1
+    if alpha_count > 1:
+      missing_keys.append(
+          f"... and {alpha_count-1} alphas. The model doesn't have alpha, use dim (rannk) as alpha. You can ignore this message.")
+
+    info = torch.nn.modules.module._IncompatibleKeys(missing_keys, info.unexpected_keys)
 
   return network, info
 
@@ -138,7 +179,7 @@ class LoRANetworkCompvis(torch.nn.Module):
         else:
           cv_name = f"lora_te_wrapped_transformer_text_model_encoder_layers_{cv_index}_{du_suffix}"
 
-    assert cv_name is not None, f"conversion failed: {du_name}"
+    assert cv_name is not None, f"conversion failed: {du_name}. the model may not be trained by `sd-scripts`."
     return cv_name
 
   @classmethod
@@ -156,15 +197,17 @@ class LoRANetworkCompvis(torch.nn.Module):
 
     return new_sd
 
-  def __init__(self, text_encoder, unet, multiplier=1.0, lora_dim=4) -> None:
+  def __init__(self, text_encoder, unet, multiplier_tenc=1.0, multiplier_unet=1.0, lora_dim=4, alpha=1) -> None:
     super().__init__()
-    self.multiplier = multiplier
+    self.multiplier_unet = multiplier_unet
+    self.multiplier_tenc = multiplier_tenc
     self.lora_dim = lora_dim
+    self.alpha = alpha
 
     # create module instances
     self.v2 = False
 
-    def create_modules(prefix, root_module: torch.nn.Module, target_replace_modules) -> list:
+    def create_modules(prefix, root_module: torch.nn.Module, target_replace_modules, multiplier):
       loras = []
       replaced_modules = []
       for name, module in root_module.named_modules():
@@ -175,7 +218,7 @@ class LoRANetworkCompvis(torch.nn.Module):
               lora_name = lora_name.replace('.', '_')
               if '_resblocks_23_' in lora_name:                           # ignore last block in StabilityAi Text Encoder
                 break
-              lora = LoRAModule(lora_name, child_module, self.multiplier, self.lora_dim)
+              lora = LoRAModule(lora_name, child_module, multiplier, self.lora_dim, self.alpha)
               loras.append(lora)
 
               replaced_modules.append(child_module)
@@ -188,26 +231,26 @@ class LoRANetworkCompvis(torch.nn.Module):
                 if '_resblocks_23_' in module_name:                           # ignore last block in StabilityAi Text Encoder
                   break
                 lora_name = module_name + '_' + suffix
-                lora_info = LoRAInfo(lora_name, module_name, child_module, self.multiplier, self.lora_dim)
+                lora_info = LoRAInfo(lora_name, module_name, child_module, multiplier, self.lora_dim, self.alpha)
                 loras.append(lora_info)
 
                 replaced_modules.append(child_module)
       return loras, replaced_modules
 
     self.text_encoder_loras, te_rep_modules = create_modules(LoRANetworkCompvis.LORA_PREFIX_TEXT_ENCODER,
-                                                             text_encoder, LoRANetworkCompvis.TEXT_ENCODER_TARGET_REPLACE_MODULE)
+                                                             text_encoder, LoRANetworkCompvis.TEXT_ENCODER_TARGET_REPLACE_MODULE, self.multiplier_tenc)
     print(f"create LoRA for Text Encoder: {len(self.text_encoder_loras)} modules.")
 
     self.unet_loras, unet_rep_modules = create_modules(
-        LoRANetworkCompvis.LORA_PREFIX_UNET, unet, LoRANetworkCompvis.UNET_TARGET_REPLACE_MODULE)
+        LoRANetworkCompvis.LORA_PREFIX_UNET, unet, LoRANetworkCompvis.UNET_TARGET_REPLACE_MODULE, self.multiplier_unet)
     print(f"create LoRA for U-Net: {len(self.unet_loras)} modules.")
 
-    # make backup of original forward/weights, if multiple modules are applied, do in 1st module onnly
+    # make backup of original forward/weights, if multiple modules are applied, do in 1st module only
     backed_up = False                     # messaging purpose only
     for rep_module in te_rep_modules + unet_rep_modules:
-      if rep_module.__class__.__name__ == "MultiheadAttention":      # multiple modules in list, prevent to backed up forward
+      if rep_module.__class__.__name__ == "MultiheadAttention":      # multiple MHA modules are in list, prevent to backed up forward
         if not hasattr(rep_module, "_lora_org_weights"):
-          # avoid updating, state_dict is reference to original weights
+          # avoid updating of original weights. state_dict is reference to original weights
           rep_module._lora_org_weights = copy.deepcopy(rep_module.state_dict())
           backed_up = True
       elif not hasattr(rep_module, "_lora_org_forward"):
@@ -301,8 +344,9 @@ class LoRANetworkCompvis(torch.nn.Module):
 
             def merge_weights(weight, up_weight, down_weight):
               # calculate in float
+              scale = lora_info.alpha / lora_info.dim
               dtype = weight.dtype
-              weight = weight.float() + lora_info.multiplier * (up_weight.to(dev, dtype=torch.float) @ down_weight.to(dev, dtype=torch.float))
+              weight = weight.float() + lora_info.multiplier * (up_weight.to(dev, dtype=torch.float) @ down_weight.to(dev, dtype=torch.float)) * scale
               weight = weight.to(dtype)
               return weight
 
@@ -326,6 +370,9 @@ class LoRANetworkCompvis(torch.nn.Module):
             for t in ["q", "k", "v", "out"]:
               del state_dict[f"{lora_info.module_name}_{t}_proj.lora_down.weight"]
               del state_dict[f"{lora_info.module_name}_{t}_proj.lora_up.weight"]
+              alpha_key = f"{lora_info.module_name}_{t}_proj.alpha"
+              if alpha_key in state_dict:
+                del state_dict[alpha_key]
           else:
             # corresponding weight not exists: version mismatch
             pass
