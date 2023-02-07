@@ -110,7 +110,7 @@
     "quicksettings": "sd_model_checkpoint",
     "ui_reorder": "inpaint, sampler, dimensions, cfg, seed, checkboxes, hires_fix, batch, scripts",
     "ui_extra_networks_tab_reorder": "",
-    "localization": "zh_CN",
+    "localization": "Chinese-English",
     "show_progressbar": true,
     "live_previews_enable": false,
     "show_progress_grid": true,
