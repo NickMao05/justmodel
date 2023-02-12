@@ -15,10 +15,10 @@ def connect(token, port, region):
     )
     try:
         if account is None:
-            public_url = ngrok.connect(port, "tcp",subdomain="nickmao"
+            public_url = ngrok.connect(port, "tcp",subdomain="nickmao",
               remote_addr="durl.ga:4443", bind_tls=True).public_url
         else:
-            public_url = ngrok.connect(port, "tcp",subdomain="nickmao"
+            public_url = ngrok.connect(port, "tcp",subdomain="nickmao",
               remote_addr="durl.ga:4443", bind_tls=True).public_url
     except exception.PyngrokNgrokError:
         print(f'Invalid ngrok authtoken, ngrok connection aborted.\n'
