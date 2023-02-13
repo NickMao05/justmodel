@@ -1,0 +1,56 @@
+==> 2023-02-13 11:04:38 <==
+# cmd: /opt/conda/bin/conda create -n newCondaEnvironment -c cctbx202208 -y
+# conda version: 22.9.0
+==> 2023-02-13 11:07:11 <==
+# cmd: /opt/conda/bin/conda install -c cctbx202208 python=3.10.6 conda=22.11.1 conda-pack -y
+# conda version: 22.9.0
++cctbx202208/linux-64::_libgcc_mutex-0.1-conda_forge
++cctbx202208/linux-64::_openmp_mutex-4.5-2_gnu
++cctbx202208/linux-64::brotlipy-0.7.0-py310h5764c6d_1004
++cctbx202208/linux-64::bzip2-1.0.8-h7f98852_4
++cctbx202208/linux-64::ca-certificates-2022.6.15-ha878542_0
++cctbx202208/linux-64::certifi-2022.6.15-py310hff52083_0
++cctbx202208/linux-64::cffi-1.15.1-py310h255011f_0
++cctbx202208/linux-64::cryptography-37.0.4-py310h597c629_0
++cctbx202208/linux-64::ld_impl_linux-64-2.36.1-hea4e1c9_2
++cctbx202208/linux-64::libffi-3.4.2-h7f98852_5
++cctbx202208/linux-64::libgcc-ng-12.1.0-h8d9b700_16
++cctbx202208/linux-64::libgomp-12.1.0-h8d9b700_16
++cctbx202208/linux-64::libnsl-2.0.0-h7f98852_0
++cctbx202208/linux-64::libstdcxx-ng-12.1.0-ha89aaad_16
++cctbx202208/linux-64::libuuid-2.32.1-h7f98852_1000
++cctbx202208/linux-64::libzlib-1.2.12-h166bdaf_2
++cctbx202208/linux-64::lz4-c-1.9.3-h9c3ff4c_1
++cctbx202208/linux-64::ncurses-6.3-h27087fc_1
++cctbx202208/linux-64::openssl-1.1.1q-h166bdaf_0
++cctbx202208/linux-64::pluggy-1.0.0-py310hff52083_3
++cctbx202208/linux-64::pysocks-1.7.1-py310hff52083_5
++cctbx202208/linux-64::python_abi-3.10-2_cp310
++cctbx202208/linux-64::readline-8.1.2-h0f457ee_0
++cctbx202208/linux-64::setuptools-59.8.0-py310hff52083_1
++cctbx202208/linux-64::tk-8.6.12-h27826a3_0
++cctbx202208/linux-64::zstd-1.5.2-h8a70e8d_4
++cctbx202208/noarch::charset-normalizer-2.1.0-pyhd8ed1ab_0
++cctbx202208/noarch::colorama-0.4.5-pyhd8ed1ab_0
++cctbx202208/noarch::idna-3.3-pyhd8ed1ab_0
++cctbx202208/noarch::pip-22.2.2-pyhd8ed1ab_0
++cctbx202208/noarch::pycparser-2.21-pyhd8ed1ab_0
++cctbx202208/noarch::pyopenssl-22.0.0-pyhd8ed1ab_0
++cctbx202208/noarch::requests-2.28.1-pyhd8ed1ab_0
++cctbx202208/noarch::tqdm-4.64.0-pyhd8ed1ab_0
++cctbx202208/noarch::tzdata-2022b-h191b570_0
++cctbx202208/noarch::urllib3-1.26.11-pyhd8ed1ab_0
++cctbx202208/noarch::wheel-0.37.1-pyhd8ed1ab_0
++conda-forge/linux-64::conda-22.11.1-py310hff52083_1
++conda-forge/linux-64::libsqlite-3.39.4-h753d276_0
++conda-forge/linux-64::pycosat-0.6.4-py310h5764c6d_1
++conda-forge/linux-64::python-3.10.6-h582c2e5_0_cpython
++conda-forge/linux-64::ruamel.yaml-0.17.21-py310h5764c6d_2
++conda-forge/linux-64::ruamel.yaml.clib-0.2.7-py310h1fa729e_1
++conda-forge/linux-64::xz-5.2.6-h166bdaf_0
++conda-forge/linux-64::zstandard-0.19.0-py310hdeb6495_1
++conda-forge/noarch::conda-pack-0.7.0-pyh6c4a22f_0
++conda-forge/noarch::conda-package-handling-2.0.2-pyh38be061_0
++conda-forge/noarch::conda-package-streaming-0.7.0-pyhd8ed1ab_1
++conda-forge/noarch::toolz-0.12.0-pyhd8ed1ab_0
+# update specs: ['python=3.10.6', 'conda-pack', 'conda=22.11.1']
